@@ -4,11 +4,10 @@ This is a small utility, it greps through the contents of an archive file, it al
 They like to do that in java, where they have jars nested in jars.
 
 The following archives are supported right now: zip|jar|war|ear|tar|tgz|taz|tar.gz|tbz2|tbz|tar.bz2|tar.bz
-I am trusting this link with the definition of these extensions [link](https://www.gnu.org/software/tar/manual/tar.html#Compression)
+I am trusting this link with the definition of these extensions [link - see --auto-compress option](https://www.gnu.org/software/tar/manual/tar.html#Compression)
 
 The utility is written in golang, you can see how to use it from the test output:
-The utility accepts a fixed search string, or a regular expression defined [here](https://github.com/google/re2/wiki/Syntax)
-
+The utility accepts a fixed search string, or a regular expression defined as [re2 regex syntax](https://github.com/google/re2/wiki/Syntax)
 
 The usage of the utility is here:
 <pre>
