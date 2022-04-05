@@ -9,9 +9,10 @@ make_zip_in_zip() {
 }
 
 test_it() {
-    ./rzgrep -e Close -in zip.jar
-    ./rzgrep -e Close -in zip.ear
-    ./rzgrep -e Close -in zip.tgz
+    ./rzgrep -e 'Cl.se' -in zip.jar
+    ./rzgrep -e Cl.se -in zip.jar
+    ./rzgrep -e Cl.se -in zip.ear
+    ./rzgrep -e Cl.se -in zip.tgz
 }
 
 make_zip_in_zip

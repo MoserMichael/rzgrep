@@ -384,7 +384,7 @@ type CmdParams struct {
 
 func parseCmdLine() *CmdParams {
 	inFile := flag.String("in", "", "file or directory to scan")
-	regExp := flag.String("e", "", "regular expression to search for")
+	regExp := flag.String("e", "", "regular expression to search for. Syntax defined here: https://github.com/google/re2/wiki/Syntax")
 	verbose := flag.Bool("v", false, "verbose output")
 
 	flag.Parse()
@@ -404,6 +404,10 @@ func parseCmdLine() *CmdParams {
 	cRegExp, err := regexp.Compile(*regExp)
 	if err != nil {
 		fmt.Printf("Error: the regular expression '%s' has an error %v", *regExp, err)
+	}
+
+	if *verbose {
+		fmt.Printf("regexp. raw: %s compiled: %s\n", *regExp, cRegExp)
 	}
 
 	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp}
