@@ -1,4 +1,4 @@
-package main
+package rzgrep
 
 import (
 	"archive/tar"
@@ -506,13 +506,15 @@ func parseCmdLine() *CmdParams {
 	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp, context: *context}
 }
 
-func main() {
+func RunMain()  {
 	cmdParams := parseCmdLine()
 
 	ctx := NewCtx(cmdParams.verbose, cmdParams.regExp, cmdParams.context)
+
 
 	err := ctx.runOnFile(cmdParams.inFile)
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
 }
+
