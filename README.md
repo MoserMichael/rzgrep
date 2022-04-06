@@ -223,6 +223,8 @@ zip.tgz|zip.jar|src/rzgrep.go:(317) 	ctx.runOnReader(reader)
 
 ## What I learned from all this
 
+I have managed to learn a bit of golang generics, a circular buffer based on generics is [here](https://github.com/MoserMichael/rzgrep/blob/master/src/cbuf/cbuf.go), very exiting to have generics, feels like the twenty first century!
+
 I intended to remember/pick up some golang for my job.
 
 Also there seems to be a limit, of what can be done with shell pipelines; this task of grepping a regular expression within a nested compressed archive seems to be right on the border of what is feasible with a command line.
