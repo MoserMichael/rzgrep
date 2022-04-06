@@ -1,4 +1,3 @@
-
-
+.PHONY: main
 main:
-	go build -o rzgrep src/rzgrep.go
+	GOPATH=/Users/michaelmoser/mystuff/rzgrep GO111MODULE=off go build -o rzgrep cmd/rzgrep/main.go
