@@ -19,6 +19,61 @@ import (
 	"strings"
 )
 
+type CBuf[T any] struct {
+	get_end int
+	put_end int
+	size    int
+	data    []*T
+}
+
+func NewCBuf[T any](size int) *CBuf[T] {
+	return &CBuf[T]{0, 0, size, make([]*T, size)}
+}
+func (ctx *CBuf[T]) Push(value *T) bool {
+	if ctx.IsFull() {
+		return false
+	}
+	ctx.data[ctx.put_end] = value
+	ctx.put_end = (ctx.put_end + 1) % ctx.size
+	return true
+}
+
+func (ctx *CBuf[T]) Peek() *T {
+	if ctx.IsEmpty() {
+		return nil
+	}
+	return ctx.data[ctx.get_end]
+}
+
+func (ctx *CBuf[T]) NumEntries() int {
+	if ctx.get_end < ctx.put_end {
+		return ctx.put_end - ctx.get_end
+	}
+	return ctx.size - ctx.get_end + ctx.put_end
+}
+
+func (ctx *CBuf[T]) Pop() *T {
+	if ctx.IsEmpty() {
+		return nil
+	}
+	var val = ctx.data[ctx.get_end]
+	ctx.get_end = (ctx.get_end + 1) % ctx.size
+	return val
+}
+
+func (ctx *CBuf[T]) Clear() {
+	ctx.get_end = 0
+	ctx.put_end = 0
+}
+
+func (ctx *CBuf[T]) IsFull() bool {
+	return (ctx.put_end+1)%ctx.size == ctx.get_end
+}
+
+func (ctx *CBuf[T]) IsEmpty() bool {
+	return ctx.get_end == ctx.put_end
+}
+
 type EntryType int32
 
 const (
@@ -37,15 +92,21 @@ type EType struct {
 }
 
 type Ctx struct {
-	verbose   bool
-	pathNam   string
-	path      []EType
-	regExp    *regexp.Regexp
-	hasErrors bool
+	recentLines *CBuf[string]
+	verbose     bool
+	pathNam     string
+	path        []EType
+	regExp      *regexp.Regexp
+	hasErrors   bool
 }
 
-func NewCtx(verbose bool, regExp *regexp.Regexp) *Ctx {
-	return &Ctx{verbose: verbose, pathNam: "", path: nil, regExp: regExp}
+func NewCtx(verbose bool, regExp *regexp.Regexp, context int) *Ctx {
+	var ctxBuf *CBuf[string]
+
+	if context != 0 {
+		ctxBuf = NewCBuf[string](context + 1)
+	}
+	return &Ctx{recentLines: ctxBuf, verbose: verbose, pathNam: "", path: nil, regExp: regExp}
 }
 
 func (ctx *Ctx) runOnDir(dir string) error {
@@ -263,10 +324,41 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 	var scanner = bufio.NewScanner(reader)
 	lineNo := 1
 
+	if ctx.recentLines != nil {
+		ctx.recentLines.Clear()
+	}
+
+	showLinesAfter := 0
 	for scanner.Scan() {
 		line := scanner.Text()
+
 		if ctx.regExp.FindStringIndex(line) != nil {
+
+			if ctx.recentLines != nil {
+				for !ctx.recentLines.IsEmpty() {
+					numEntries := ctx.recentLines.NumEntries()
+					bufLine := ctx.recentLines.Pop()
+					fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo-numEntries, *bufLine)
+				}
+				showLinesAfter = ctx.recentLines.size
+			}
 			fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo, line)
+		} else {
+			if showLinesAfter != 0 {
+				fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo, line)
+				showLinesAfter -= 1
+				if showLinesAfter == 1 {
+					fmt.Printf("--\n")
+					showLinesAfter = 0
+				}
+			} else {
+				if ctx.recentLines != nil {
+					if ctx.recentLines.IsFull() {
+						ctx.recentLines.Pop()
+					}
+					ctx.recentLines.Push(&line)
+				}
+			}
 		}
 		lineNo += 1
 	}
@@ -380,13 +472,14 @@ type CmdParams struct {
 	verbose bool
 	inFile  string
 	regExp  *regexp.Regexp
+	context int
 }
 
 func parseCmdLine() *CmdParams {
 	inFile := flag.String("in", "", "file or directory to scan")
 	regExp := flag.String("e", "", "regular expression to search for. Syntax defined here: https://github.com/google/re2/wiki/Syntax")
 	verbose := flag.Bool("v", false, "verbose output")
-
+	context := flag.Int("C", 0, "display a number of lines around a found line")
 	flag.Parse()
 
 	if inFile == nil || *inFile == "" {
@@ -407,16 +500,16 @@ func parseCmdLine() *CmdParams {
 	}
 
 	if *verbose {
-		fmt.Printf("regexp. raw: %s compiled: %s\n", *regExp, cRegExp)
+		fmt.Printf("regexp. raw: %s compiled: %s context lines: %d\n", *regExp, cRegExp, *context)
 	}
 
-	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp}
+	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp, context: *context}
 }
 
 func main() {
 	cmdParams := parseCmdLine()
 
-	ctx := NewCtx(cmdParams.verbose, cmdParams.regExp)
+	ctx := NewCtx(cmdParams.verbose, cmdParams.regExp, cmdParams.context)
 
 	err := ctx.runOnFile(cmdParams.inFile)
 	if err != nil {
