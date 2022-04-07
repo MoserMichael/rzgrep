@@ -9,3 +9,6 @@ vet:
 .PHONY: clean
 clean:
 	rm -f rzgrep
+
+rel: clean main
+	tar cvfz rzgrep.tar.gz rzgrep
