@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"cbuf"
 	"compress/bzip2"
 	"compress/gzip"
 	"flag"
@@ -17,10 +18,22 @@ import (
 	"path"
 	"regexp"
 	"strings"
-	"cbuf"
+)
+
+type ColorOutput int32
+
+const (
+	NoColor       ColorOutput = 0
+	ColorTerminal             = 1
+	ColorTags                 = 2
 )
 
 type EntryType int32
+
+var (
+	colorTermStart = string([]byte{27, 91, 51, 49, 109})
+	colorTermEnd   = string([]byte{27, 91, 48, 109})
+)
 
 const (
 	RegularFileEntry EntryType = 1
@@ -44,15 +57,32 @@ type Ctx struct {
 	path        []EType
 	regExp      *regexp.Regexp
 	hasErrors   bool
+	colorOutput ColorOutput
 }
 
-func NewCtx(verbose bool, regExp *regexp.Regexp, context int) *Ctx {
+func NewCtx(verbose bool, regExp *regexp.Regexp, context int, color bool) *Ctx {
 	var ctxBuf *cbuf.CBuf[string]
 
 	if context != 0 {
 		ctxBuf = cbuf.NewCBuf[string](context + 1)
 	}
-	return &Ctx{recentLines: ctxBuf, verbose: verbose, pathNam: "", path: nil, regExp: regExp}
+
+	colorOutput := NoColor
+	if color {
+		if isStdoutTerminal() {
+			colorOutput = ColorTerminal
+		} else {
+			colorOutput = ColorTags
+		}
+	}
+	return &Ctx{recentLines: ctxBuf, verbose: verbose, pathNam: "", path: nil, regExp: regExp, colorOutput: colorOutput}
+}
+
+func isStdoutTerminal() bool {
+	if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) != 0 {
+		return true
+	}
+	return false
 }
 
 func (ctx *Ctx) runOnDir(dir string) error {
@@ -275,11 +305,29 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 	}
 
 	showLinesAfter := 0
+	var machPositions [][]int
+	var hasMatch bool
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		if ctx.regExp.FindStringIndex(line) != nil {
+		if ctx.colorOutput == NoColor {
+			if ctx.regExp.FindStringIndex(line) != nil {
+				hasMatch = true
+			} else {
+				hasMatch = false
+			}
+		} else {
+			machPositions = ctx.regExp.FindAllStringIndex(line, -1)
+			if machPositions != nil {
+				hasMatch = true
+			} else {
+				hasMatch = false
+			}
+		}
+		if hasMatch {
 
+			// show lines/context before match (if requested)
 			if ctx.recentLines != nil {
 				for !ctx.recentLines.IsEmpty() {
 					numEntries := ctx.recentLines.NumEntries()
@@ -288,7 +336,33 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 				}
 				showLinesAfter = ctx.recentLines.Size()
 			}
-			fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo, line)
+
+			// show the match itself
+			if ctx.colorOutput == NoColor {
+				fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo, line)
+			} else {
+				// show highlighted match
+				fmt.Printf("%s:(%d) ", ctx.getLoc(), lineNo)
+				var lastPos int = 0
+				var lastEndMatch int = -1
+				for _, oneMatch := range machPositions {
+					startPos := oneMatch[0]
+					endPos := oneMatch[1]
+					prefixStr := line[lastPos:startPos]
+					matchStr := line[startPos:endPos]
+					fmt.Printf("%s", prefixStr)
+					if ctx.colorOutput == ColorTags {
+						fmt.Printf("<span style='color:red>%s</span>\n", matchStr)
+					}
+					if ctx.colorOutput == ColorTerminal {
+						fmt.Print(colorTermStart, matchStr, colorTermEnd)
+					}
+					lastEndMatch = endPos
+				}
+				if lastEndMatch != -1 {
+					fmt.Printf("%s\n", line[lastEndMatch:])
+				}
+			}
 		} else {
 			if showLinesAfter != 0 {
 				fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo, line)
@@ -419,6 +493,7 @@ type CmdParams struct {
 	inFile  string
 	regExp  *regexp.Regexp
 	context int
+	color   bool
 }
 
 func parseCmdLine() *CmdParams {
@@ -426,6 +501,8 @@ func parseCmdLine() *CmdParams {
 	regExp := flag.String("e", "", "regular expression to search for. Syntax defined here: https://github.com/google/re2/wiki/Syntax")
 	verbose := flag.Bool("v", false, "debug option")
 	context := flag.Int("C", 0, "display a number of lines around a matching line")
+	color := flag.Bool("color", false, "color matches on terminal (otherwise mark with <b> </b> tags)")
+
 	flag.Parse()
 
 	if inFile == nil || *inFile == "" {
@@ -449,18 +526,16 @@ func parseCmdLine() *CmdParams {
 		fmt.Printf("regexp. raw: %s compiled: %s context lines: %d\n", *regExp, cRegExp, *context)
 	}
 
-	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp, context: *context}
+	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp, context: *context, color: *color}
 }
 
-func RunMain()  {
+func RunMain() {
 	cmdParams := parseCmdLine()
 
-	ctx := NewCtx(cmdParams.verbose, cmdParams.regExp, cmdParams.context)
-
+	ctx := NewCtx(cmdParams.verbose, cmdParams.regExp, cmdParams.context, cmdParams.color)
 
 	err := ctx.runOnFile(cmdParams.inFile)
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
 }
-

@@ -1,0 +1,27 @@
+## rzgrep - grep for stuff in archives that are embedded within archives
+
+This is a small utility, it greps through the contents of an archive file, it also greps through any archive files that are embedded within an archive file.
+They like to do that in java, where they have jars nested in jars.
+
+The following archives are supported right now: zip|jar|war|ear|tar|tgz|taz|tar.gz|tbz2|tbz|tar.bz2|tar.bz
+I am trusting this link with the definition of these extensions [link - see --auto-compress option](https://www.gnu.org/software/tar/manual/tar.html#Compression)
+
+The utility is written in golang, you can see how to use it from the test output:
+The utility accepts a fixed search string, or a regular expression defined as [re2 regex syntax](https://github.com/google/re2/wiki/Syntax)
+
+
+## What I learned from all this
+
+I have managed to learn a bit of golang generics, a circular buffer based on generics is [here](https://github.com/MoserMichael/rzgrep/blob/master/src/cbuf/cbuf.go), very exiting to have generics, feels like the twenty first century!
+
+I intended to remember/pick up some golang for my job.
+
+Also there seems to be a limit, of what can be done with shell pipelines; this task of grepping a regular expression within a nested compressed archive seems to be right on the border of what is feasible with a command line.
+Luckily this problem can be solved by introducing yet another command line tool...
+
+
+## The Utility
+
+The options of the utility
+
+<pre>
