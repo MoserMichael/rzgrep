@@ -352,7 +352,7 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 					matchStr := line[startPos:endPos]
 					fmt.Printf("%s", prefixStr)
 					if ctx.colorOutput == ColorTags {
-						fmt.Printf("<span style='color:red>%s</span>\n", matchStr)
+						fmt.Printf("<span style='color:red'>%s</span>\n", matchStr)
 					}
 					if ctx.colorOutput == ColorTerminal {
 						fmt.Print(colorTermStart, matchStr, colorTermEnd)
