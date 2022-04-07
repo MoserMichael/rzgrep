@@ -8,7 +8,7 @@ vet:
 
 .PHONY: clean
 clean:
-	rm -f rzgrep
+	rm -f rzgrep rzgrep-*.tar.gz
 
 rel: clean main
 	mv rzgrep rzgrep
