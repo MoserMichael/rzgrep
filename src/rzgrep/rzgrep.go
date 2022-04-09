@@ -110,7 +110,7 @@ func (ctx *Ctx) runOnFile(fName string) error {
 
 	ty, err := ctx.classifyFile(fName)
 	if err != nil {
-		err = fmt.Errorf("Error %s : %s\n", fName, err)
+		err = fmt.Errorf("Error %s : can't classify file. %s\n", fName, err)
 	} else if ty == RegularFileEntry {
 		err = ctx.runOnRegularFile(fName)
 	} else if ty == DirEntry {
@@ -324,6 +324,7 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 			lineBytes := scanner.Bytes()
 			if bytes.IndexByte(lineBytes, 0) != -1 {
 				fileStatus = FileStatusBinary
+				showLinesAfter = 0
 			} else {
 				scannedBytes += len(lineBytes)
 				if scannedBytes > 1000 {
@@ -485,8 +486,9 @@ func (ctx *Ctx) push(file string, eType EntryType) {
 	ctx.path = append(ctx.path, elm)
 
 	if ctx.verbose {
-		log.Printf("visit %p %s %s %d %v\n", ctx.path, file, entryTypeName(eType), len(ctx.path), ctx.path)
+		log.Printf("push %p %s %s %d %v\n", ctx.path, file, entryTypeName(eType), len(ctx.path), ctx.path)
 	}
+	ctx.pathNam = ""
 }
 
 func entryTypeName(eType EntryType) string {
@@ -518,6 +520,7 @@ func (ctx *Ctx) pop() (*EType, error) {
 
 	rVal := ctx.path[nSize]
 	ctx.path = ctx.path[:nSize]
+	ctx.pathNam = ""
 
 	return &rVal, nil
 }
