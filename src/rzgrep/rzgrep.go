@@ -28,6 +28,14 @@ const (
 	ColorTags                 = 2
 )
 
+type FileStatus int32
+
+const (
+	FileStatusChecking FileStatus = 0
+	FileStatusText                = 1
+	FileStatusBinary              = 2
+)
+
 type EntryType int32
 
 var (
@@ -297,6 +305,8 @@ func (ctx *Ctx) runOnRegularFile(fName string) error {
 
 func (ctx *Ctx) runOnReader(reader io.Reader) {
 
+	fileStatus := FileStatusChecking
+
 	var scanner = bufio.NewScanner(reader)
 	lineNo := 1
 
@@ -305,11 +315,28 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 	}
 
 	showLinesAfter := 0
+	scannedBytes := 0
 	var machPositions [][]int
 	var hasMatch bool
 
 	for scanner.Scan() {
+		if fileStatus == FileStatusChecking {
+			lineBytes := scanner.Bytes()
+			if bytes.IndexByte(lineBytes, 0) != -1 {
+				fileStatus = FileStatusBinary
+			} else {
+				scannedBytes += len(lineBytes)
+				if scannedBytes > 1000 {
+					fileStatus = FileStatusText
+				}
+			}
+		}
+
 		line := scanner.Text()
+		if fileStatus == FileStatusChecking {
+			// check if line contains 0 characters
+
+		}
 
 		if ctx.colorOutput == NoColor {
 			if ctx.regExp.FindStringIndex(line) != nil {
@@ -326,6 +353,11 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 			}
 		}
 		if hasMatch {
+
+			if fileStatus == FileStatusBinary {
+				fmt.Printf("%s - binary file matches\n", ctx.getLoc())
+				return
+			}
 
 			// show lines/context before match (if requested)
 			if ctx.recentLines != nil {
@@ -352,7 +384,7 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 					matchStr := line[startPos:endPos]
 					fmt.Printf("%s", prefixStr)
 					if ctx.colorOutput == ColorTags {
-						fmt.Print("<b>",matchStr,"</b>")
+						fmt.Print("<b>", matchStr, "</b>")
 					}
 					if ctx.colorOutput == ColorTerminal {
 						fmt.Print(colorTermStart, matchStr, colorTermEnd)
@@ -372,11 +404,13 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 					showLinesAfter = 0
 				}
 			} else {
-				if ctx.recentLines != nil {
-					if ctx.recentLines.IsFull() {
-						ctx.recentLines.Pop()
+				if fileStatus != FileStatusBinary {
+					if ctx.recentLines != nil {
+						if ctx.recentLines.IsFull() {
+							ctx.recentLines.Pop()
+						}
+						ctx.recentLines.Push(&line)
 					}
-					ctx.recentLines.Push(&line)
 				}
 			}
 		}
