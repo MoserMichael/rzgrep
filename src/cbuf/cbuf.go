@@ -21,7 +21,8 @@ func (ctx *CBuf[T]) Push(value T) bool {
 
 func (ctx *CBuf[T]) Peek() (T, bool) {
 	if ctx.IsEmpty() {
-		return ctx.data[0], false
+		var nullValue T
+		return nullValue, false
 	}
 	return ctx.data[ctx.getEnd], true
 }
@@ -35,7 +36,8 @@ func (ctx *CBuf[T]) NumEntries() int {
 
 func (ctx *CBuf[T]) Pop() (T, bool) {
 	if ctx.IsEmpty() {
-		return ctx.data[0], false
+		var nullValue T
+		return nullValue, false
 	}
 	var val = ctx.data[ctx.getEnd]
 	ctx.getEnd = (ctx.getEnd + 1) % ctx.size
