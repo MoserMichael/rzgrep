@@ -4,13 +4,13 @@ type CBuf[T any] struct {
 	getEnd int
 	putEnd int
 	size   int
-	data   []*T
+	data   []T
 }
 
 func NewCBuf[T any](size int) *CBuf[T] {
-	return &CBuf[T]{0, 0, size, make([]*T, size)}
+	return &CBuf[T]{0, 0, size, make([]T, size)}
 }
-func (ctx *CBuf[T]) Push(value *T) bool {
+func (ctx *CBuf[T]) Push(value T) bool {
 	if ctx.IsFull() {
 		return false
 	}
@@ -19,11 +19,11 @@ func (ctx *CBuf[T]) Push(value *T) bool {
 	return true
 }
 
-func (ctx *CBuf[T]) Peek() *T {
+func (ctx *CBuf[T]) Peek() (T, bool) {
 	if ctx.IsEmpty() {
-		return nil
+		return ctx.data[0], false
 	}
-	return ctx.data[ctx.getEnd]
+	return ctx.data[ctx.getEnd], true
 }
 
 func (ctx *CBuf[T]) NumEntries() int {
@@ -33,13 +33,13 @@ func (ctx *CBuf[T]) NumEntries() int {
 	return ctx.size - ctx.getEnd + ctx.putEnd
 }
 
-func (ctx *CBuf[T]) Pop() *T {
+func (ctx *CBuf[T]) Pop() (T, bool) {
 	if ctx.IsEmpty() {
-		return nil
+		return ctx.data[0], false
 	}
 	var val = ctx.data[ctx.getEnd]
 	ctx.getEnd = (ctx.getEnd + 1) % ctx.size
-	return val
+	return val, true
 }
 
 func (ctx *CBuf[T]) Clear() {

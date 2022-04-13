@@ -364,8 +364,8 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 			if ctx.recentLines != nil {
 				for !ctx.recentLines.IsEmpty() {
 					numEntries := ctx.recentLines.NumEntries()
-					bufLine := ctx.recentLines.Pop()
-					fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo-numEntries, *bufLine)
+					bufLine, _ := ctx.recentLines.Pop()
+					fmt.Printf("%s:(%d) %s\n", ctx.getLoc(), lineNo-numEntries, bufLine)
 				}
 				showLinesAfter = ctx.recentLines.Size()
 			}
@@ -410,7 +410,7 @@ func (ctx *Ctx) runOnReader(reader io.Reader) {
 						if ctx.recentLines.IsFull() {
 							ctx.recentLines.Pop()
 						}
-						ctx.recentLines.Push(&line)
+						ctx.recentLines.Push(line)
 					}
 				}
 			}
