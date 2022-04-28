@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    gradlePluginPortal()
+    //mavenCentral()
+}
+
+dependencies {
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
+    testImplementation 'junit:junit:4.13'
+    implementation 'org.jd:jd-core:1.1.3'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+
+application {
+    // Define the main class for the application.
+    mainClass = 'decomp.Cmd'
+}
+
+// added to include dependencies in output jar.
+// from : https://stackoverflow.com/questions/4871656/using-gradle-to-build-a-jar-with-dependencies
+
+jar {
+    manifest {
+        attributes "Main-Class": 'decomp.Cmd'
+    }
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
