@@ -4,12 +4,15 @@ This is a small utility, it greps through the contents of an archive file, it al
 They like to do that in java, where they have jars nested in jars.
 
 You have also the option to decompile the contents of the class files that are include within the jar files, and to grep through them!
+I am using [jd-core](https://github.com/java-decompiler/jd-core) for the java decompiler.
 
 The following archives are supported right now: zip|jar|war|ear|tar|tgz|taz|tar.gz|tbz2|tbz|tar.bz2|tar.bz
 I am trusting this link with the definition of these extensions [link - see --auto-compress option](https://www.gnu.org/software/tar/manual/tar.html#Compression)
 
 The utility is written in golang, you can see how to use it from the test output:
 The utility accepts a fixed search string, or a regular expression defined as [re2 regex syntax](https://github.com/google/re2/wiki/Syntax)
+
+You can download the [binary release](https://github.com/MoserMichael/rzgrep/releases), please put the two binaries into the same directory
 
 
 ## What I learned from all this
