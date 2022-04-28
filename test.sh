@@ -23,7 +23,8 @@ test_it() {
     ./rzgrep -color -C 3 -e Cl.se -in zip.ear
     ./rzgrep -color -C 3 -e Cl.se -in zip.tgz
 
-
+    echo "*** Java decompiler: search in compiled classes ***"
+    ./rzgrep -color -C 3 -e for -in rzgrep.jar -j
 }
 
 make_zip_in_zip
