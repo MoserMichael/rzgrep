@@ -59,31 +59,45 @@ type EType struct {
 }
 
 type Ctx struct {
-	recentLines *cbuf.CBuf[string]
-	verbose     bool
-	pathNam     string
-	path        []EType
-	regExp      *regexp.Regexp
-	hasErrors   bool
-	colorOutput ColorOutput
+	recentLines    *cbuf.CBuf[string]
+	verbose        bool
+	pathNam        string
+	path           []EType
+	regExp         *regexp.Regexp
+	hasErrors      bool
+	colorOutput    ColorOutput
+	javaDecompiler *JavaDecompiler
 }
 
-func NewCtx(verbose bool, regExp *regexp.Regexp, context int, color bool) *Ctx {
+func NewCtx(cmdParams *CmdParams) *Ctx {
 	var ctxBuf *cbuf.CBuf[string]
 
-	if context != 0 {
-		ctxBuf = cbuf.NewCBuf[string](context + 1)
+	if cmdParams.context != 0 {
+		ctxBuf = cbuf.NewCBuf[string](cmdParams.context + 1)
 	}
 
 	colorOutput := NoColor
-	if color {
+	if cmdParams.color {
 		if isStdoutTerminal() {
 			colorOutput = ColorTerminal
 		} else {
 			colorOutput = ColorTags
 		}
 	}
-	return &Ctx{recentLines: ctxBuf, verbose: verbose, pathNam: "", path: nil, regExp: regExp, colorOutput: colorOutput}
+	var javaDecompiler *JavaDecompiler
+
+	if cmdParams.useJavaDecompiler {
+		javaDecompiler = NewJavaDecompiler()
+	}
+
+	return &Ctx{
+		recentLines:    ctxBuf,
+		verbose:        cmdParams.verbose,
+		pathNam:        "",
+		path:           nil,
+		regExp:         cmdParams.regExp,
+		colorOutput:    colorOutput,
+		javaDecompiler: javaDecompiler}
 }
 
 func isStdoutTerminal() bool {
@@ -113,16 +127,24 @@ func (ctx *Ctx) runOnFile(fName string) error {
 		err = fmt.Errorf("Error %s : can't classify file. %s\n", fName, err)
 	} else if ty == RegularFileEntry {
 		err = ctx.runOnRegularFile(fName)
-	} else if ty == DirEntry {
-		err = ctx.runOnDir(fName)
-	} else if ty == ZipFileEntry {
-		err = ctx.runOnZipFile(fName)
-	} else if ty&GzipFileEntry != 0 {
-		err = ctx.runOnGzipFile(fName, ty)
-	} else if ty&Bzip2FileEntry != 0 {
-		err = ctx.runOnBzip2File(fName, ty)
 	} else {
-		err = fmt.Errorf("error, unsupported option %d", ty)
+		if ctx.javaDecompiler != nil {
+			ctx.javaDecompiler.InitArchive(fName)
+		}
+		if ty == DirEntry {
+			err = ctx.runOnDir(fName)
+		} else if ty == ZipFileEntry {
+			err = ctx.runOnZipFile(fName)
+		} else if ty&GzipFileEntry != 0 {
+			err = ctx.runOnGzipFile(fName, ty)
+		} else if ty&Bzip2FileEntry != 0 {
+			err = ctx.runOnBzip2File(fName, ty)
+		} else {
+			err = fmt.Errorf("error, unsupported option %d", ty)
+		}
+		if ctx.javaDecompiler != nil {
+			ctx.javaDecompiler.CloseArchive(ctx)
+		}
 	}
 	return err
 }
@@ -182,8 +204,13 @@ func (ctx *Ctx) runOnZipReader(reader io.Reader, fileSize int64) error {
 
 }
 
-func (ctx *Ctx) runOnAnyReader(fName string, reader io.Reader, fileSize int64) {
+func (ctx *Ctx) runOnClassReader(fName string, reader io.Reader) {
+	ctx.push(fName, RegularFileEntry)
+	defer ctx.pop()
+	ctx.runOnReader(reader)
+}
 
+func (ctx *Ctx) runOnAnyReader(fName string, reader io.Reader, fileSize int64) {
 	entryType := ctx.classifyFileName(fName)
 
 	ctx.push(fName, entryType)
@@ -192,7 +219,14 @@ func (ctx *Ctx) runOnAnyReader(fName string, reader io.Reader, fileSize int64) {
 	var err error
 
 	if entryType&RegularFileEntry != 0 {
-		ctx.runOnReader(reader)
+		if ctx.javaDecompiler != nil && ctx.javaDecompiler.IsClassFile(fName) {
+			err = ctx.javaDecompiler.StoreClassFile(fName, reader)
+			if err != nil {
+				fmt.Printf("Error: Can't store class file %s : %s\n", fName, err)
+			}
+		} else {
+			ctx.runOnReader(reader)
+		}
 	} else if entryType&ZipFileEntry != 0 {
 		err = ctx.runOnZipReader(reader, fileSize)
 	} else if entryType&GzipFileEntry != 0 {
@@ -298,7 +332,15 @@ func (ctx *Ctx) runOnRegularFile(fName string) error {
 	defer file.Close()
 
 	var reader io.Reader = file
-	ctx.runOnReader(reader)
+
+	if ctx.javaDecompiler != nil && ctx.javaDecompiler.IsClassFile(fName) {
+		err = ctx.javaDecompiler.StoreClassFile(fName, reader)
+		if err != nil {
+			fmt.Printf("Error: Can't store class file %s : %s\n", fName, err)
+		}
+	} else {
+		ctx.runOnReader(reader)
+	}
 
 	return err
 }
@@ -526,11 +568,12 @@ func (ctx *Ctx) pop() (*EType, error) {
 }
 
 type CmdParams struct {
-	verbose bool
-	inFile  string
-	regExp  *regexp.Regexp
-	context int
-	color   bool
+	verbose           bool
+	inFile            string
+	regExp            *regexp.Regexp
+	context           int
+	color             bool
+	useJavaDecompiler bool
 }
 
 func parseCmdLine() *CmdParams {
@@ -539,6 +582,7 @@ func parseCmdLine() *CmdParams {
 	verbose := flag.Bool("v", false, "debug option")
 	context := flag.Int("C", 0, "display a number of lines around a matching line")
 	color := flag.Bool("color", false, "color matches on terminal (otherwise mark with <b> </b> tags)")
+	javaDecompiler := flag.Bool("j", false, "use java decompiler for .class files")
 
 	flag.Parse()
 
@@ -563,16 +607,21 @@ func parseCmdLine() *CmdParams {
 		fmt.Printf("regexp. raw: %s compiled: %s context lines: %d\n", *regExp, cRegExp, *context)
 	}
 
-	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp, context: *context, color: *color}
+	return &CmdParams{verbose: *verbose, inFile: *inFile, regExp: cRegExp, context: *context, color: *color, useJavaDecompiler: *javaDecompiler}
 }
 
 func RunMain() {
 	cmdParams := parseCmdLine()
 
-	ctx := NewCtx(cmdParams.verbose, cmdParams.regExp, cmdParams.context, cmdParams.color)
+	ctx := NewCtx(cmdParams)
 
 	err := ctx.runOnFile(cmdParams.inFile)
 	if err != nil {
 		fmt.Printf("Error: %v", err)
+	}
+
+	if ctx.javaDecompiler != nil {
+		ctx.javaDecompiler.CloseArchive(ctx)
+		ctx.javaDecompiler.Close()
 	}
 }

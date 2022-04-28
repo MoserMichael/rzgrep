@@ -1,6 +1,11 @@
 .PHONY: main
-main:
+main: makeJava
 	GOPATH=$(PWD) GO111MODULE=off go build -o rzgrep cmd/rzgrep/main.go
+
+.PHONY: makeJava
+makeJava: 
+	cd java-decompiler; ./gradlew build
+	cp ./java-decompiler/build/libs/java-decompiler-1.0-SNAPSHOT.jar rzgrep.jar
 
 .PHONY: vet
 vet:
