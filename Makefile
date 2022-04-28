@@ -1,5 +1,9 @@
 .PHONY: main
-main: makeJava
+main: makego makeJava
+	echo "*main build*"
+
+.PHONY: makego
+makego:
 	GOPATH=$(PWD) GO111MODULE=off go build -o rzgrep cmd/rzgrep/main.go
 
 .PHONY: makeJava
@@ -15,9 +19,9 @@ vet:
 clean:
 	rm -f rzgrep rzgrep-*.tar.gz
 
-rel: clean main
+rel: clean makego
 	mv rzgrep rzgrep
-	tar cvfz rzgrep-$(shell uname -s).tar.gz rzgrep
+	tar cvfz rzgrep-$(shell uname -s).tar.gz rzgrep rzgrep.jar
 
 allrel : rel
 	docker build --progress=plain --rm=true -t rzgrep-builder:latest . 

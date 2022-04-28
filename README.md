@@ -3335,5 +3335,33 @@ org/jd/core/v1/util/DefaultStack.class:(69)                 sb.append(", ");
 org/jd/core/v1/util/DefaultStack.class:(70)                 sb.append(this.elements[i]);
 org/jd/core/v1/util/DefaultStack.class:(71)             } 
 --
++ echo '*** Java decompiler: show first twenty imports by popularity ***'
+*** Java decompiler: show first twenty imports by popularity ***
++ ./rzgrep -e '^import' -in rzgrep.jar -j
++ uniq -c
++ awk '{ print $3 }'
++ head -20
++ sort -k 1 -r
++ sort
+  82 org.jd.core.v1.model.javasyntax.type.Type;
+  64 org.jd.core.v1.model.javasyntax.expression.Expression;
+  63 org.jd.core.v1.model.javasyntax.type.ObjectType;
+  54 org.jd.core.v1.model.javasyntax.type.BaseType;
+  49 org.jd.core.v1.util.DefaultList;
+  47 java.util.List;
+  45 org.jd.core.v1.model.javasyntax.statement.Statement;
+  43 org.jd.core.v1.model.javasyntax.type.PrimitiveType;
+  40 java.util.Map;
+  38 org.jd.core.v1.model.javasyntax.expression.ExpressionVisitor;
+  35 org.jd.core.v1.model.javasyntax.statement.BaseStatement;
+  31 org.jd.core.v1.model.javasyntax.declaration.BodyDeclaration;
+  29 org.jd.core.v1.model.javasyntax.type.BaseTypeArgument;
+  29 org.jd.core.v1.model.javasyntax.statement.StatementVisitor;
+  29 org.jd.core.v1.model.javasyntax.expression.BaseExpression;
+  28 org.jd.core.v1.model.javasyntax.type.InnerObjectType;
+  28 org.jd.core.v1.model.javasyntax.type.GenericType;
+  27 org.jd.core.v1.model.javasyntax.expression.BinaryOperatorExpression;
+  26 org.jd.core.v1.model.javasyntax.statement.ExpressionStatement;
+  25 org.jd.core.v1.service.converter.classfiletojavasyntax.model.javasyntax.declaration.ClassFileBodyDeclaration;
 + echo '*** eof test ***'
 *** eof test ***

@@ -25,6 +25,9 @@ test_it() {
 
     echo "*** Java decompiler: search in compiled classes ***"
     ./rzgrep -color -C 3 -e for -in rzgrep.jar -j
+
+    echo "*** Java decompiler: show first twenty imports by popularity ***"
+    ./rzgrep  -e ^import -in rzgrep.jar -j  | awk '{ print $3 }' | sort | uniq -c  | sort -k 1 -r | head -20
 }
 
 make_zip_in_zip
