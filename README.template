@@ -3,6 +3,8 @@
 This is a small utility, it greps through the contents of an archive file, it also greps through any archive files that are embedded within an archive file.
 They like to do that in java, where they have jars nested in jars.
 
+You have also the option to decompile the contents of the class files that are include within the jar files, and to grep through them!
+
 The following archives are supported right now: zip|jar|war|ear|tar|tgz|taz|tar.gz|tbz2|tbz|tar.bz2|tar.bz
 I am trusting this link with the definition of these extensions [link - see --auto-compress option](https://www.gnu.org/software/tar/manual/tar.html#Compression)
 
