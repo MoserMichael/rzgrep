@@ -3341,11 +3341,11 @@ org/jd/core/v1/util/DefaultStack.class:(71)             }
 + echo '*** Java decompiler: show first twenty imports by popularity ***'
 *** Java decompiler: show first twenty imports by popularity ***
 + ./rzgrep -e '^import' -in rzgrep.jar -j
-+ awk '{ print $3 }'
++ head -20
++ sort -k 1 -r
 + sort
 + uniq -c
-+ sort -k 1 -r
-+ head -20
++ awk '{ print $3 }'
   82 org.jd.core.v1.model.javasyntax.type.Type;
   64 org.jd.core.v1.model.javasyntax.expression.Expression;
   63 org.jd.core.v1.model.javasyntax.type.ObjectType;
