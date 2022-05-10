@@ -95,7 +95,9 @@ public class PipeDecompiler {
         inData = new DataInputStream(System.in);
         outData = new DataOutputStream(System.out);
         loader = new RootDirLoader(this);
-        openLogger();
+
+        //don't need that right now. consider enabling that optionally...
+        //openLogger();
     }
 
     private void openLogger() {
@@ -147,10 +149,12 @@ public class PipeDecompiler {
     }
 
     private void log(String toLog) {
-        try {
-            this.logger.write(toLog + "\n");
-            this.logger.flush();
-        } catch(IOException ex) {
+        if (this.logger != null) {
+            try {
+                this.logger.write(toLog + "\n");
+                this.logger.flush();
+            } catch (IOException ex) {
+            }
         }
     }
 }
